@@ -22,7 +22,7 @@ struct TGAColor {
     : b(B), g(G), r(R), a(A), bytespp(4) {
   }
 
-  TGAColor(const uint32_t &v, int bpp)
+  TGAColor(const uint32_t v, int bpp)
     : val(v), bytespp(bpp) {
   }
 
@@ -49,31 +49,31 @@ struct TGAColor {
     return *this;
   }
 
-  TGAColor operator+(const TGAColor& c) {
-	return {
-        (uint8_t)std::min(b + c.b, 0xFF),
-        (uint8_t)std::min(g + c.g, 0xFF),
-        (uint8_t)std::min(r + c.r, 0xFF),
-        (uint8_t)std::min(a + c.a, 0xFF),
-    };
+  const TGAColor& operator+(const TGAColor& c) const {
+    return std::move(TGAColor{
+      (uint8_t)std::min(b + c.b, 0xFF),
+      (uint8_t)std::min(g + c.g, 0xFF),
+      (uint8_t)std::min(r + c.r, 0xFF),
+      (uint8_t)std::min(a + c.a, 0xFF),
+    });
   }
 
-  TGAColor operator*(const TGAColor& c) {
-	return {
-        (uint8_t)std::min(b * c.b, 0xFF),
-        (uint8_t)std::min(g * c.g, 0xFF),
-        (uint8_t)std::min(r * c.r, 0xFF),
-        (uint8_t)std::min(a * c.a, 0xFF),
-    };
+  const TGAColor& operator*(const TGAColor& c) const {
+    return std::move(TGAColor{
+      (uint8_t)std::min(b * c.b, 0xFF),
+      (uint8_t)std::min(g * c.g, 0xFF),
+      (uint8_t)std::min(r * c.r, 0xFF),
+      (uint8_t)std::min(a * c.a, 0xFF),
+    });
   }
 
-  TGAColor operator*(const float& s) {
-	return {
-        std::min(uint8_t(b * s), uint8_t(0xFF)),
-        std::min(uint8_t(g * s), uint8_t(0xFF)),
-        std::min(uint8_t(r * s), uint8_t(0xFF)),
-        std::min(uint8_t(a * s), uint8_t(0xFF)),
-    };
+  const TGAColor& operator*(const float s) const {
+    return std::move(TGAColor{
+      std::min(uint8_t(b * s), uint8_t(0xFF)),
+      std::min(uint8_t(g * s), uint8_t(0xFF)),
+      std::min(uint8_t(r * s), uint8_t(0xFF)),
+      std::min(uint8_t(a * s), uint8_t(0xFF)),
+    });
   }
 
   TGAColor& operator*=(const float& s) {
