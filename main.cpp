@@ -37,7 +37,7 @@ void triangle(triangle_i32 triangle, TGAImage& image, TGAColor color) {
     .line(t2, t0, color);
 }
 
-std::tuple<Vec2i, Vec2i> trigBoundary(const Vec2i& t0, const Vec2i& t1, const Vec2i& t2) {
+std::tuple<Vec2i, Vec2i> triangle_boundary(const Vec2i& t0, const Vec2i& t1, const Vec2i& t2) {
   constexpr size_t w = width;
   constexpr size_t h = height;
 
@@ -99,7 +99,7 @@ void filled_triangle(triangle_i32 triangle, TGAImage& image, TGAColor color) {
   auto& [a, b, c] = triangle;
   
 
-  auto [min, max] = trigBoundary(triangle[0], triangle[1], triangle[2]);
+  auto [min, max] = triangle_boundary(triangle[0], triangle[1], triangle[2]);
 
   for (int y = min.y; y < max.y; ++y) {
     for (int x = min.x; x < max.x; ++x) {
