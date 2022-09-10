@@ -1,9 +1,11 @@
+#include "tgaimage.hpp"
+
 #include <iostream>
 #include <fstream>
 #include <string.h>
 #include <time.h>
 #include <math.h>
-#include "tgaimage.hpp"
+
 
 TGAImage::TGAImage() : data(NULL), width(0), height(0), bytespp(0) {
 }
@@ -348,4 +350,44 @@ bool TGAImage::scale(int w, int h) {
 	width = w;
 	height = h;
 	return true;
+}
+
+
+TGAImage& TGAImage::line(int x0, int y0, int x1, int y1, TGAColor color) {
+  bool steep = false;
+  if (std::abs(x0 - x1) < std::abs(y0 - y1)) { // if the line is steep, we transpose the image
+    std::swap(x0, y0);
+    std::swap(x1, y1);
+    steep = true;
+  }
+  if (x0 > x1) { // make it left−to−right
+    std::swap(x0, x1);
+    std::swap(y0, y1);
+  }
+  int dx = x1 - x0;
+  int dy = y1 - y0;
+  int derror2 = std::abs(dy) * 2;
+  int error2 = 0;
+  int y = y0;
+  for (int x = x0; x <= x1; x++) {
+    if (steep) {
+      set(y, x, color); // if transposed, de−transpose
+    } else {
+      set(x, y, color);
+    }
+    error2 += derror2;
+    if (error2 > dx) {
+      y += (y1 > y0 ? 1 : -1);
+      error2 -= dx * 2;
+    }
+  }
+  return *this;
+}
+
+TGAImage& TGAImage::line(Vec2i a, Vec2i b, TGAColor color) {
+  int x0 = a.x;
+  int y0 = a.y;
+  int x1 = b.x;
+  int y1 = b.y;
+  return line(x0, y0, x1, y1, color);
 }
