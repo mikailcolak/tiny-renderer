@@ -129,77 +129,75 @@ void raster_triangle(triangle_i32 triangle, TGAImage& image, const TGAColor &col
   }
 }
 
-template<typename T>
-T lerp(T a, T b, float t) {
+void model_rendering(TGAImage& image) {
+  std::random_device rd;
+  std::mt19937 mt(rd());
+  std::uniform_int_distribution<uint32_t> dist(0, 0xFFFFFFFF);
+
+  // TGAColor modelColor = TGAColor(dist(mt));
+  const TGAColor model_color = white;
+
+  Model model{"./assets/african_head.obj"};
+
+  Vec3f light_dir{0, 0, -1};
+
+  for (int i = 0; i < model.nfaces(); i++) {
+    std::vector<int> face = model.face(i);
+    std::array<Vec3f, 3> vertices = { model.vert(face[0]), model.vert(face[1]), model.vert(face[2]) };
+
+    auto& [a, b, c] = vertices;
+
+    auto u = c - a;
+    auto v = b - a;
+
+    //normalized normal = cross product of u and v (u x v)
+    auto face_normal = Vec3f{
+      u.y * v.z - u.z * v.y,
+      u.z * v.x - u.x * v.z,
+      u.x * v.y - u.y * v.x
+    }.normalize();
+    // auto face_normal = (u ^ v).normalized();
+
+    const float_t light_intensity = face_normal * light_dir;
+
+    if (light_intensity <= 0) continue;
+
+    TGAColor color { model_color * light_intensity };
+    color.a = 255;
+    
+    triangle_i32 screen_vertices;
+    std::transform(vertices.begin(), vertices.end(), screen_vertices.begin(), [](auto& x){
+        return Vec2i{
+          int32_t((x.x / aspect_ratio + 1.0f) * width_half),
+          int32_t((x.y + 1.0f) * height_half)
+        };
+    });
+
+    raster_triangle(screen_vertices, image, color);
+    triangle(screen_vertices, image, white);
+  }
+}
+
+void triangle_rendering(TGAImage& image) {
+  const triangle_i32 t0{ Vec2i(0, 0), Vec2i(0, height), Vec2i(width/2, height/2) };
+  const triangle_i32 t1{ Vec2i(180, 50), Vec2i(150, 1), Vec2i(70, 180) };
+  const triangle_i32 t2{ Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
+  raster_triangle(t0, image, red);
+  raster_triangle(t1, image, green);
+  raster_triangle(t2, image, blue);
+
+  const triangle_i32 test{Vec2i(10,10), Vec2i(100, 30), Vec2i(190, 160)};
+  raster_triangle(test, image, white);
 }
 
 int main(int, char**) {
 
   TGAImage image(width, height, TGAImage::RGB);
   
-  if (false) { // Triangles
-    const triangle_i32 t0{ Vec2i(0, 0), Vec2i(0, height), Vec2i(width/2, height/2) };
-    const triangle_i32 t1{ Vec2i(180, 50), Vec2i(150, 1), Vec2i(70, 180) };
-    const triangle_i32 t2{ Vec2i(180, 150), Vec2i(120, 160), Vec2i(130, 180) };
-    raster_triangle(t0, image, red);
-    raster_triangle(t1, image, green);
-    raster_triangle(t2, image, blue);
-
-    const triangle_i32 test{Vec2i(10,10), Vec2i(100, 30), Vec2i(190, 160)};
-    raster_triangle(test, image, white);
-  }
-
-  if (true) { // Model rendering
-    std::random_device rd;
-    std::mt19937 mt(rd());
-    std::uniform_int_distribution<uint32_t> dist(0, 0xFFFFFFFF);
-
-    // TGAColor modelColor = TGAColor(dist(mt));
-    const TGAColor model_color = white;
-
-    Model model{"./assets/african_head.obj"};
-
-    Vec3f light_dir{0, 0, -1};
-
-    for (int i = 0; i < model.nfaces(); i++) {
-      std::vector<int> face = model.face(i);
-      std::array<Vec3f, 3> vertices = { model.vert(face[0]), model.vert(face[1]), model.vert(face[2]) };
-
-      auto& [a, b, c] = vertices;
-
-      auto u = c - a;
-      auto v = b - a;
-
-      //normalized normal = cross product of u and v (u x v)
-      auto face_normal = Vec3f{
-        u.y * v.z - u.z * v.y,
-        u.z * v.x - u.x * v.z,
-        u.x * v.y - u.y * v.x
-      }.normalize();
-      // auto face_normal = (u ^ v).normalized();
-
-      const float_t light_intensity = face_normal * light_dir;
-
-      if (light_intensity <= 0) continue;
-
-      TGAColor color { model_color * light_intensity };
-      color.a = 255;
-      
-      triangle_i32 screen_vertices;
-      std::transform(vertices.begin(), vertices.end(), screen_vertices.begin(), [](auto& x){
-          return Vec2i{
-            int32_t((x.x / aspect_ratio + 1.0f) * width_half),
-            int32_t((x.y + 1.0f) * height_half)
-          };
-      });
-
-      raster_triangle(screen_vertices, image, color);
-      //triangle(tri, image, white);
-    }
-  }
+  triangle_rendering(image);
+  model_rendering(image);
 
   image.flip_vertically(); // i want to have the origin at the left bottom
-                           // corner of the image
   image.write_tga_file("wireframe.tga");
 
   return EXIT_SUCCESS;
