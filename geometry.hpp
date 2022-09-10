@@ -25,6 +25,9 @@ struct Vec2 {
   inline Vec2<T> operator+(const Vec2<T>& V) const { return Vec2<T>(u + V.u, v + V.v); }
   inline Vec2<T> operator-(const Vec2<T>& V) const { return Vec2<T>(u - V.u, v - V.v); }
   inline Vec2<T> operator*(float_t f) const { return Vec2<T>(u * f, v * f); }
+  T operator[](size_t i) const    {return raw[i];}
+  T & operator[](size_t i) {return raw[i];}
+
   template<class>
   friend std::ostream& operator<<(std::ostream& s, Vec2<T>& v);
 };
@@ -53,6 +56,8 @@ struct Vec3 {
   inline Vec3<T> operator-(const Vec3<T>& v) const { return Vec3<T>(x - v.x, y - v.y, z - v.z); }
   inline Vec3<T> operator*(float f) const { return Vec3<T>(x * f, y * f, z * f); }
   inline T operator*(const Vec3<T>& v) const { return x * v.x + y * v.y + z * v.z; }
+  T operator[](size_t i) const    {return raw[i];}
+  T & operator[](size_t i) {return raw[i];}
   float length() const { return std::sqrt(x * x + y * y + z * z); }
   Vec3<T>& normalize(T l = 1) {
     *this = (*this) * (l / length());
