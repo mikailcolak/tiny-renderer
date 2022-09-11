@@ -100,14 +100,6 @@ inline glm::vec3 world2screen(glm::vec3 v, size_t width, size_t height) {
   return glm::vec3(int((v.x * aspect_ratio +1.)*width_half+.5), int((v.y+1.)*width_half+.5), v.z);
 }
 
-inline glm::vec3 screen2world(glm::vec2 v, size_t width, size_t height) {
-  const size_t width_half = width / 2;
-  const size_t height_half = height / 2;
-  const float_t aspect_ratio = width < height ? height / float(width) : width / float(height);
-
-  return glm::vec3(v.x  / width_half, v.y / width_half, 0);
-}
-
 inline void depth_buffer_2(TGAImage& image) {
   const size_t width = image.get_width();
   const size_t height = image.get_height();
@@ -216,4 +208,15 @@ inline void depth_buffer_2(TGAImage& image) {
       raster_triangle_with_depth_buffer(screen_coords, face_texcoord, z_buffer, image, texture, light_intensity);
     }
   }
+
+   { // dump z-buffer (debugging purposes only)
+        TGAImage zbimage(width, height, TGAImage::GRAYSCALE);
+        for (int i=0; i<width; i++) {
+            for (int j=0; j<height; j++) {
+                zbimage.set(i, j, TGAColor(int((0.5 + z_buffer[i+j*width]) / 2 * 0xFF), 1));
+            }
+        }
+        zbimage.flip_vertically(); // i want to have the origin at the left bottom corner of the image
+        zbimage.write_tga_file("zbuffer.tga");
+    }
 }
