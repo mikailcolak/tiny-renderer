@@ -1,9 +1,10 @@
 #ifndef __IMAGE_H__
 #define __IMAGE_H__
 
-#include "geometry.hpp"
 #include "tga_color.hpp"
 #include "tga_header.hpp"
+
+#include <glm/glm.hpp>
 
 #include <cstdint>
 #include <fstream>
@@ -43,8 +44,8 @@ public:
   unsigned char* buffer();
   void clear();
 
-  TGAImage& line(int x0, int y0, int x1, int y1, TGAColor color);
-  TGAImage& line(Vec2i a, Vec2i b, TGAColor color);
+  TGAImage& line(int x0, int y0, int x1, int y1, const TGAColor color);
+  TGAImage& line(glm::vec2 a, glm::vec2 b, const TGAColor color);
 };
 
 #endif //__IMAGE_H__

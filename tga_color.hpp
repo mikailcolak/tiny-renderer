@@ -3,6 +3,28 @@
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
+#include <bit>
+#include <iostream>
+
+constexpr uint32_t RGBA2BGRA(const uint32_t color) {
+  if constexpr (std::endian::native == std::endian::big){
+    return color; // TODO..
+  } else {
+    return ((color & 0x00'00'00'FF) << 24) | ((color & 0xFF'FF'FF'00) >> 8);;
+  }
+} 
+
+constexpr uint32_t WHITE     {RGBA2BGRA(0xFF'FF'FF'FF)};
+constexpr uint32_t RED       {RGBA2BGRA(0xFF'00'00'FF)};
+constexpr uint32_t GREEN     {RGBA2BGRA(0x00'FF'00'FF)};
+constexpr uint32_t BLUE      {RGBA2BGRA(0x00'00'FF'FF)};
+constexpr uint32_t YELLOW    {RGBA2BGRA(0xFF'FF'00'FF)};
+constexpr uint32_t GREY      {RGBA2BGRA(0x7F'7F'7F'FF)};
+constexpr uint32_t DARK_GREY {RGBA2BGRA(0x40'40'40'FF)};
+constexpr uint32_t BLACK     {RGBA2BGRA(0x00'00'00'FF)};
+constexpr uint32_t MAGENTA   {RGBA2BGRA(0xFF'00'FF'FF)};
+
+
 
 struct TGAColor {
   union {
@@ -26,8 +48,8 @@ struct TGAColor {
     : val(v), bytespp(bpp) {
   }
 
-  TGAColor(const uint32_t rgba)
-    : b((rgba & 0xFF000000) >> 24), g((rgba & 0x00FF0000) >> 16), r((rgba & 0x0000FF00) >> 8), a(rgba & 0x000000FF), bytespp(4) {
+  TGAColor(const uint32_t bgra)
+    : val(bgra), bytespp(4) {
   }
 
   TGAColor(const TGAColor& c)

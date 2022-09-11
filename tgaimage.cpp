@@ -1,4 +1,5 @@
 #include "tgaimage.hpp"
+#include "glm/fwd.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -257,7 +258,7 @@ TGAColor TGAImage::get(int x, int y) {
 	return TGAColor(data+(x+y*width)*bytespp, bytespp);
 }
 
-bool TGAImage::set(int x, int y, TGAColor c) {
+bool TGAImage::set(int x, int y, const TGAColor c) {
 	if (!data || x<0 || y<0 || x>=width || y>=height) {
 		return false;
 	}
@@ -353,7 +354,7 @@ bool TGAImage::scale(int w, int h) {
 }
 
 
-TGAImage& TGAImage::line(int x0, int y0, int x1, int y1, TGAColor color) {
+TGAImage& TGAImage::line(int x0, int y0, int x1, int y1, const TGAColor color) {
   bool steep = false;
   if (std::abs(x0 - x1) < std::abs(y0 - y1)) { // if the line is steep, we transpose the image
     std::swap(x0, y0);
@@ -384,10 +385,6 @@ TGAImage& TGAImage::line(int x0, int y0, int x1, int y1, TGAColor color) {
   return *this;
 }
 
-TGAImage& TGAImage::line(Vec2i a, Vec2i b, TGAColor color) {
-  int x0 = a.x;
-  int y0 = a.y;
-  int x1 = b.x;
-  int y1 = b.y;
-  return line(x0, y0, x1, y1, color);
+TGAImage& TGAImage::line(glm::vec2 a, glm::vec2 b, const TGAColor color) {
+  return line(a.x, a.y, b.x, b.y, color);
 }
