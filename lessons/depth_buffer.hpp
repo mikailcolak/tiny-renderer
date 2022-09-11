@@ -1,15 +1,18 @@
 #pragma once
+#include "glm/common.hpp"
+#define TINYOBJLOADER_IMPLEMENTATION // define this in only *one* .cc
 
 #include "../tgaimage.hpp"
 #include "../model.hpp"
 #include "../rasterization.hpp"
-#include "glm/geometric.hpp"
+#include "../tiny_obj_loader.hpp"
 
 #include <glm/glm.hpp>
 
 #include <algorithm>
 #include <cstddef>
 #include <limits>
+#include <tuple>
 #include <type_traits>
 #include <vector>
 
@@ -31,18 +34,18 @@ inline void rasterize_1d(line2d_i32 line, TGAImage& image, TGAColor color, std::
       
       uint8_t yc = t * y / 4;
       // Resterized y depth buffer
-      image.set(x, 9, TGAColor(yc, yc, yc, 0xFF));
-      image.set(x, 8, TGAColor(yc, yc, yc, 0xFF));
-      image.set(x, 7, TGAColor(yc, yc, yc, 0xFF));
-      image.set(x, 6, TGAColor(yc, yc, yc, 0xFF));
-      image.set(x, 5, TGAColor(yc, yc, yc, 0xFF));
+      image.set(x, image.get_height() - 4, TGAColor(yc, yc, yc, 0xFF));
+      image.set(x, image.get_height() - 3, TGAColor(yc, yc, yc, 0xFF));
+      image.set(x, image.get_height() - 2, TGAColor(yc, yc, yc, 0xFF));
+      image.set(x, image.get_height() - 1, TGAColor(yc, yc, yc, 0xFF));
+      image.set(x, image.get_height() - 0, TGAColor(yc, yc, yc, 0xFF));
 
       // Rasterized image
-      image.set(x, 4, color);
-      image.set(x, 3, color);
-      image.set(x, 2, color);
-      image.set(x, 1, color);
-      image.set(x, 0, color);
+      image.set(x, image.get_height() - 9, color);
+      image.set(x, image.get_height() - 8, color);
+      image.set(x, image.get_height() - 7, color);
+      image.set(x, image.get_height() - 6, color);
+      image.set(x, image.get_height() - 5, color);
     }
   }
 }
@@ -67,7 +70,7 @@ inline void depth_buffer_1(TGAImage& image) {
     .line(lineC[0], lineC[1], BLUE);
 
   // screen line
-  image.line(glm::vec2(0, 10), glm::vec2(image.get_width(), 10), WHITE);
+  image.line(glm::vec2(0, image.get_height() - 10), glm::vec2(image.get_width(), image.get_height() - 10), WHITE);
 
   // screen depth buffer line
   std::vector<int32_t> y_buffer(image.get_width(), std::numeric_limits<int32_t>::min());
@@ -75,11 +78,11 @@ inline void depth_buffer_1(TGAImage& image) {
   int i = 0;
   std::for_each(y_buffer.begin(), y_buffer.end(), [&image, &i](auto val){
     if (val == std::numeric_limits<int32_t>::min()) {
-      image.set(i, 9, MAGENTA);
-      image.set(i, 8, MAGENTA);
-      image.set(i, 7, MAGENTA);
-      image.set(i, 6, MAGENTA);
-      image.set(i, 5, MAGENTA);
+      image.set(image.get_height() - i, image.get_height() - 9, MAGENTA);
+      image.set(image.get_height() - i, image.get_height() - 8, MAGENTA);
+      image.set(image.get_height() - i, image.get_height() - 7, MAGENTA);
+      image.set(image.get_height() - i, image.get_height() - 6, MAGENTA);
+      image.set(image.get_height() - i, image.get_height() - 5, MAGENTA);
       ++i;
     };
   });
@@ -93,52 +96,124 @@ inline glm::vec3 world2screen(glm::vec3 v, size_t width, size_t height) {
   const size_t width_half = width / 2;
   const size_t height_half = height / 2;
   const float_t aspect_ratio = width < height ? height / float(width) : width / float(height);
+
   return glm::vec3(int((v.x * aspect_ratio +1.)*width_half+.5), int((v.y+1.)*width_half+.5), v.z);
+}
+
+inline glm::vec3 screen2world(glm::vec2 v, size_t width, size_t height) {
+  const size_t width_half = width / 2;
+  const size_t height_half = height / 2;
+  const float_t aspect_ratio = width < height ? height / float(width) : width / float(height);
+
+  return glm::vec3(v.x  / width_half, v.y / width_half, 0);
 }
 
 inline void depth_buffer_2(TGAImage& image) {
   const size_t width = image.get_width();
   const size_t height = image.get_height();
-  const TGAColor model_color = WHITE;
 
-  Model model{ "./assets/african_head.obj" };
+  TGAImage texture{};
+  texture.read_tga_file("./assets/african_head_diffuse.tga");
+  texture.flip_vertically();
 
-  glm::vec3 light_dir{ 0, 0, -1 };
+  float_t ambient_light_contribution = 0.4;
 
-  for (int i = 0; i < model.nfaces(); i++) {
-    std::vector<int> face = model.face(i);
-    std::array<glm::vec3, 3> vertices = { model.vert(face[0]), model.vert(face[1]), model.vert(face[2]) };
+  std::string inputfile = "./assets/african_head.obj";
+  tinyobj::ObjReaderConfig reader_config{};
+  tinyobj::ObjReader reader{};
 
-    auto& [a, b, c] = vertices;
+  if (!reader.ParseFromFile(inputfile, reader_config)) {
+    if (!reader.Error().empty()) {
+        std::cerr << "TinyObjReader: " << reader.Error();
+    }
+    exit(1);
+  }
 
-    auto u = c - a;
-    auto v = b - a;
+  if (!reader.Warning().empty()) {
+    std::cout << "TinyObjReader: " << reader.Warning();
+  }
 
-    // normalized normal = cross product of u and v (u x v)
-    auto face_normal = glm::normalize(glm::vec3{
-      u.y * v.z - u.z * v.y,
-      u.z * v.x - u.x * v.z,
-      u.x * v.y - u.y * v.x
-    });
-    // auto face_normal = (u ^ v).normalized();
+  glm::vec3 light_dir{ 0.3, 0, -1 };
+  std::vector<float_t> z_buffer(width * height, -std::numeric_limits<float_t>::max());
 
-    const float_t light_intensity = glm::dot(face_normal, light_dir);
+  auto& attrib = reader.GetAttrib();
+  auto& shapes = reader.GetShapes();
+  auto& materials = reader.GetMaterials();
 
-    if (light_intensity <= 0)
-      continue;
+  for (size_t s = 0; s < shapes.size(); s++) {
+    size_t index_offset = 0;
+    for (size_t f = 0; f < shapes[s].mesh.num_face_vertices.size(); f++) {
 
-    TGAColor color{ model_color * light_intensity };
-    color.a = 255;
+      size_t fv = size_t(shapes[s].mesh.num_face_vertices[f]);
 
-    std::array<glm::vec3, 3> screen_vertices;
-    std::transform(vertices.begin(), vertices.end(), screen_vertices.begin(), [&](auto& x) {
-      return world2screen(x, width, height);
-    });
+      std::array<glm::vec3, 3> face_vertices{};
+      std::array<glm::vec3, 3> face_normals{};
+      std::array<glm::vec2, 3> face_texcoord{};
 
-    // screen depth buffer line
-    std::vector<int32_t> z_buffer(image.get_width() * image.get_height(), -std::numeric_limits<float>::max());
+      // TODO: Instead of discarding quad face split them into 2 triangular face!!!
+      // if (fv > 3) continue;
 
-    raster_triangle_with_depth_buffer(screen_vertices, z_buffer, image, color);
-    //ssloy_triangle_with_depth_buffer(screen_vertices, z_buffer, image, color);
+      // Loop over vertices in the face.
+      for (size_t v = 0; v < fv; v++) {
+        // access to vertex
+        tinyobj::index_t idx = shapes[s].mesh.indices[index_offset + v];
+        tinyobj::real_t vx = attrib.vertices[3*size_t(idx.vertex_index)+0];
+        tinyobj::real_t vy = attrib.vertices[3*size_t(idx.vertex_index)+1];
+        tinyobj::real_t vz = attrib.vertices[3*size_t(idx.vertex_index)+2];
+        face_vertices[v] = glm::vec3{vx, vy, vz};
+
+        // Check if `normal_index` is zero or positive. negative = no normal data
+        if (idx.normal_index >= 0) {
+          tinyobj::real_t nx = attrib.normals[3*size_t(idx.normal_index)+0];
+          tinyobj::real_t ny = attrib.normals[3*size_t(idx.normal_index)+1];
+          tinyobj::real_t nz = attrib.normals[3*size_t(idx.normal_index)+2];
+          face_normals[v] = glm::vec3{nx, ny, nz};
+        }
+
+        // Check if `texcoord_index` is zero or positive. negative = no texcoord data
+        if (idx.texcoord_index >= 0) {
+          tinyobj::real_t tx = attrib.texcoords[2*size_t(idx.texcoord_index)+0];
+          tinyobj::real_t ty = attrib.texcoords[2*size_t(idx.texcoord_index)+1];
+          face_texcoord[v] = glm::vec2{tx, ty};
+        }
+
+        // Optional: vertex colors
+        // tinyobj::real_t red   = attrib.colors[3*size_t(idx.vertex_index)+0];
+        // tinyobj::real_t green = attrib.colors[3*size_t(idx.vertex_index)+1];
+        // tinyobj::real_t blue  = attrib.colors[3*size_t(idx.vertex_index)+2];
+      }
+
+      index_offset += fv;
+
+      // per-face material
+      shapes[s].mesh.material_ids[f];
+      // end of tiny obj loader routine
+
+      // Render it
+      std::array<glm::vec3, 3> world_coords = face_vertices;
+      std::array<glm::vec3, 3> screen_coords;
+      
+      auto& [a, b, c] = world_coords;
+      auto wcu = c - a;
+      auto wcv = b - a;
+
+      // normalized normal = cross product of u and v (u x v)
+      auto face_normal = glm::normalize(glm::cross(wcu, wcv));
+
+      const float_t light_intensity = glm::clamp(glm::dot(face_normal, light_dir) + ambient_light_contribution, 0.f, 1.f);
+
+      if (light_intensity <= 0)
+        continue;
+
+      std::transform(world_coords.begin(), world_coords.end(), screen_coords.begin(), [&](auto& x) {
+        return world2screen(x, width, height);
+      });
+
+      // std::transform(face_texcoord.begin(), face_texcoord.end(), face_texcoord.begin(), [&](auto& x) {
+      //   return screen2world(x, width, height);
+      // });
+
+      raster_triangle_with_depth_buffer(screen_coords, face_texcoord, z_buffer, image, texture, light_intensity);
+    }
   }
 }

@@ -7,7 +7,8 @@
 class Model {
 private:
 	std::vector<glm::vec3> verts_;
-	std::vector<std::vector<int> > faces_;
+	std::vector<std::vector<int>> faces_;
+	std::vector<std::vector<glm::vec3>> texture_coords_;
 public:
 	Model(const char *filename);
 	~Model();

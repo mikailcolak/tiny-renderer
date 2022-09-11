@@ -1,12 +1,15 @@
 #pragma once
 
 #include "glm/geometric.hpp"
+#include "tga_color.hpp"
 #include "tgaimage.hpp"
 
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <tuple>
+#include <type_traits>
 
 template<class T>
 inline T lerp(T a, T b, float_t t) {
@@ -28,35 +31,27 @@ inline void triangle(std::array<glm::vec2, 3> triangle, TGAImage& image, TGAColo
 
 template<size_t SIZE>
 inline std::tuple<glm::vec2, glm::vec2> bbox(const std::array<glm::vec2, SIZE> points, glm::vec2 clamp_min, glm::vec2 clamp_max) {
-  constexpr float_t minf = std::numeric_limits<float_t>::min();
-  constexpr float_t maxf = std::numeric_limits<float_t>::max();
-  glm::vec2 min{ maxf, maxf };
-  glm::vec2 max{ minf, minf };
-
-  for (size_t i = 0; i < SIZE; ++i) {
-    min.x = std::min(clamp_max.x, std::min(min.x, points[i].x));
-    min.y = std::min(clamp_max.y, std::min(min.y, points[i].y));
-    max.x = std::max(clamp_min.x, std::max(max.x, points[i].x));
-    max.y = std::max(clamp_min.y, std::max(max.y, points[i].y));
+  glm::vec2 min(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+  glm::vec2 max(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 2; j++) {
+      min[j] = std::max(clamp_min[j], std::min(min[j], points[i][j]));
+      max[j] = std::min(clamp_max[j], std::max(max[j], points[i][j]));
+    }
   }
-
   return std::make_tuple(min, max);
 }
 
 template<size_t SIZE>
 inline std::tuple<glm::vec2, glm::vec2> bbox(const std::array<glm::vec3, SIZE> points, glm::vec2 clamp_min, glm::vec2 clamp_max) {
-  constexpr float_t minf = std::numeric_limits<float_t>::min();
-  constexpr float_t maxf = std::numeric_limits<float_t>::max();
-  glm::vec2 min{ maxf, maxf };
-  glm::vec2 max{ minf, minf };
-
-  for (size_t i = 0; i < SIZE; ++i) {
-    min.x = std::min(clamp_max.x, std::min(min.x, points[i].x));
-    min.y = std::min(clamp_max.y, std::min(min.y, points[i].y));
-    max.x = std::max(clamp_min.x, std::max(max.x, points[i].x));
-    max.y = std::max(clamp_min.y, std::max(max.y, points[i].y));
+  glm::vec2 min(std::numeric_limits<float>::max(), std::numeric_limits<float>::max());
+  glm::vec2 max(-std::numeric_limits<float>::max(), -std::numeric_limits<float>::max());
+  for (int i = 0; i < 3; i++) {
+    for (int j = 0; j < 2; j++) {
+      min[j] = std::max(clamp_min[j], std::min(min[j], points[i][j]));
+      max[j] = std::min(clamp_max[j], std::max(max[j], points[i][j]));
+    }
   }
-
   return std::make_tuple(min, max);
 }
 
@@ -116,7 +111,7 @@ inline glm::vec3 barycentric(std::array<glm::vec3, 3> triangle, glm::vec3 P) {
     s[i][1] = B[i] - A[i];
     s[i][2] = A[i] - P[i];
   }
-  glm::vec3 u = cross(s[0], s[1]);
+  glm::vec3 u = glm::cross(s[0], s[1]);
   if (std::abs(u[2]) > 1e-2) // dont forget that u[2] is integer. If it is zero then triangle ABC is degenerate
     return glm::vec3(1.f - (u.x + u.y) / u.z, u.y / u.z, u.x / u.z);
   return glm::vec3(-1, 1, 1); // in this case generate negative coordinates, it will be thrown away by the rasterizator
@@ -148,56 +143,57 @@ inline void raster_triangle(std::array<glm::vec2, 3> triangle, TGAImage& image, 
   }
 }
 
-inline void raster_triangle_with_depth_buffer(std::array<glm::vec3, 3> triangle, std::vector<int32_t>& depth_buffer, TGAImage& image, const TGAColor& color) {
+inline void raster_triangle_with_depth_buffer(
+  std::array<glm::vec3, 3>& triangle,
+  std::array<glm::vec2, 3>& texcoord,
+  std::vector<float_t>& z_buffer,
+  TGAImage& image,
+  TGAImage& texture,
+  float light_intensity
+) {
+  //std::sort(triangle.begin(), triangle.end(), [](glm::vec3& a, glm::vec3& b) { return a.y > b.y; });
   auto& [a, b, c] = triangle;
+  auto& [tex_a, tex_b, tex_c] = texcoord;
+  const float_t width = image.get_width();
+  const float_t height = image.get_height();
 
-  const glm::vec2 clamp_min{ 0, 0 };
-  const glm::vec2 clamp_max{ float_t(image.get_width()), float_t(image.get_height()) };
+  constexpr glm::vec2 clamp_min{ 0, 0 };
+  const glm::vec2 clamp_max{ width, height };
   auto [min, max] = bbox(triangle, clamp_min, clamp_max);
 
   float_t z = 0;
+
   for (float_t y = min.y; y <= max.y; ++y) {
     for (float_t x = min.x; x <= max.x; ++x) {
-      auto bc = barycentric(triangle, glm::vec3{ x, y, z });
-      
-      // barycentric U/X screen coordinate
-      const auto usc = bc.x;
-      // barycentric V/Y screen coordinate
-      const auto vsc = bc.y;
-      // barycentric W/Z screen coordinate
-      const auto wsc = bc.z;
+      auto bc = barycentric(triangle, glm::vec3(x, y, z));
 
-      if (usc < 0 || vsc < 0 || wsc < 0)
+      // barycentric U/X screen coordinate
+      const auto bcx = bc.x;
+      // barycentric V/Y screen coordinate
+      const auto bcy = bc.y;
+      // barycentric W/Z screen coordinate
+      const auto bcz = bc.z;
+
+      if (bcx < 0 || bcy < 0 || bcz < 0)
         continue;
 
-      z = a.z * usc + b.z * vsc + c.z * wsc;
-      size_t depth_index = size_t(x * y / image.get_width());
-      if (depth_buffer[depth_index] < z) {
-        depth_buffer[depth_index] = z;
+      z = a.z * bcx + b.z * bcy + c.z * bcz;
+
+      int depth_index = size_t(x + y * width);
+      if (z_buffer[depth_index] < z) {
+        
+        z_buffer[depth_index] = z;
+
+        int u = ((tex_a.x * bcx) + (tex_b.x * bcy) + (tex_c.x * bcz)) * texture.get_width();
+        int v = ((tex_a.y * bcx) + (tex_b.y * bcy) + (tex_c.y * bcz)) * texture.get_height();
+        
+        auto color = texture.get(u, v);
+        color.r *= light_intensity;
+        color.g *= light_intensity;
+        color.b *= light_intensity;
+        color.a = 255;
+
         image.set(x, y, color);
-      }
-    }
-  }
-}
-
-inline void ssloy_triangle_with_depth_buffer(std::array<glm::vec3, 3> pts, std::vector<int32_t>& zbuffer, TGAImage& image, const TGAColor& color) {
-  const glm::vec2 clamp_min{ 0, 0 };
-  const glm::vec2 clamp_max{ float_t(image.get_width()), float_t(image.get_height()) };
-  auto [bboxmin, bboxmax] = bbox(pts, clamp_min, clamp_max);
-
-  glm::vec3 P;
-  for (P.x = bboxmin.x; P.x <= bboxmax.x; P.x++) {
-    for (P.y = bboxmin.y; P.y <= bboxmax.y; P.y++) {
-      glm::vec3 bc_screen = barycentric(pts, P);
-
-      if (bc_screen.x < 0 || bc_screen.y < 0 || bc_screen.z < 0) continue;
-
-      P.z = 0;
-
-      for (int i = 0; i < 3; i++) P.z += pts[i][2] * bc_screen[i];
-      if (zbuffer[int(P.x + P.y * image.get_width())] < P.z) {
-        zbuffer[int(P.x + P.y * image.get_width())] = P.z;
-        image.set(P.x, P.y, color);
       }
     }
   }

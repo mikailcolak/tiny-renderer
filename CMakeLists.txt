@@ -14,9 +14,9 @@ add_executable(tiny-renderer
     main.cpp
     tgaimage.hpp
     tgaimage.cpp
-    geometry.hpp
     model.hpp
     model.cpp
+    tiny_obj_loader.hpp
 )
 
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
