@@ -4,6 +4,7 @@ project(tiny-renderer VERSION 0.1.0)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+include_directories(.)
 include_directories(external)
 include_directories(external/glm)
 
@@ -19,8 +20,12 @@ add_executable(tiny-renderer
     tiny_obj_loader.hpp
 )
 
+add_subdirectory(lessons)
+target_link_libraries(tiny-renderer PRIVATE lessons)
+
+file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})
+
 set(CPACK_PROJECT_NAME ${PROJECT_NAME})
 set(CPACK_PROJECT_VERSION ${PROJECT_VERSION})
 include(CPack)
 
-file(COPY assets DESTINATION ${CMAKE_BINARY_DIR})

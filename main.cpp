@@ -19,6 +19,7 @@
 #include "lessons/model_rendering.hpp"
 #include "lessons/triangle_rendering.hpp"
 #include "lessons/depth_buffer.hpp"
+#include "lessons/perspective_projection.hpp"
 
 int main(int, char**) {
 
@@ -27,7 +28,8 @@ int main(int, char**) {
   // triangle_rendering(image);
   // model_rendering(image);
   // depth_buffer_1(image);
-  depth_buffer_2(image);
+  // depth_buffer_2(image);
+  perspective_projection_study_1(image);
 
   image.flip_vertically(); // i want to have the origin at the left bottom
   image.write_tga_file("result.tga");

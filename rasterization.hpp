@@ -21,7 +21,15 @@ inline T inverse_lerp(T a, T b, T v) {
   return (v - a) / (b - a);
 }
 
-inline void triangle(std::array<glm::vec2, 3> triangle, TGAImage& image, TGAColor color) {
+inline glm::vec3 world_to_screen(glm::vec3 v, size_t width, size_t height) {
+  const size_t width_half = width / 2;
+  const size_t height_half = height / 2;
+  const float_t aspect_ratio = width < height ? height / float(width) : width / float(height);
+
+  return glm::vec3(int((v.x * aspect_ratio + 1.0f) * width_half + 0.5f), int((v.y + 1.0f) * width_half + 0.5f), v.z);
+}
+
+inline void triangle(std::array<glm::vec2, 3>& triangle, TGAImage& image, TGAColor color) {
   auto& [t0, t1, t2] = triangle;
   image
     .line(t0, t1, color)
