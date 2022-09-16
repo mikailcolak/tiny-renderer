@@ -29,7 +29,8 @@ int main(int, char**) {
   // model_rendering(image);
   // depth_buffer_1(image);
   // depth_buffer_2(image);
-  perspective_projection_study_1(image);
+  // perspective_projection_study_1(image);
+  perspective_projection_study_2(image);
 
   image.flip_vertically(); // i want to have the origin at the left bottom
   image.write_tga_file("result.tga");

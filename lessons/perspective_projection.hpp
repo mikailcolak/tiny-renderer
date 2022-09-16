@@ -6,3 +6,4 @@
 #include <glm/glm.hpp>
 
 void perspective_projection_study_1(TGAImage& image);
+void perspective_projection_study_2(TGAImage& image);
