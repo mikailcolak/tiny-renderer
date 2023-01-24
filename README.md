@@ -13,7 +13,7 @@ a road, a car, a tree;
 ## World Space
 The space that contains 3D objects located in.
 
-a road on top of a car beside a tree;
+a road, on top of that road a car that sits by a tree;
 
 ## Camera Space (aka: View Space)
 A space that re-defines(translates) the each vertices of all 3D objects within world space according to view direction (look direction)
